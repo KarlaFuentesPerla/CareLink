@@ -1,0 +1,47 @@
+import { createClient } from "@/lib/supabase/server";
+import { requireCaregiverElderAccess } from "@/lib/auth/session";
+import { ConfigTabs } from "@/components/caregiver/ConfigTabs";
+import { PageHeader } from "@/components/layout/page-header";
+
+export default async function ConfiguracionPage({
+  params,
+}: {
+  params: Promise<{ elderId: string }>;
+}) {
+  const { elderId } = await params;
+  await requireCaregiverElderAccess(elderId);
+  const supabase = await createClient();
+
+  const [
+    { data: elder },
+    { data: medications },
+    { data: appointments },
+    { data: foodRules },
+  ] = await Promise.all([
+    supabase.from("elders").select("*").eq("id", elderId).single(),
+    supabase.from("medications").select("*").eq("elder_id", elderId).order("created_at"),
+    supabase.from("appointments").select("*").eq("elder_id", elderId).order("starts_at"),
+    supabase.from("food_rules").select("*").eq("elder_id", elderId).order("created_at"),
+  ]);
+
+  return (
+    <div className="p-4 pb-24 lg:p-8 lg:pb-8">
+      <PageHeader
+        title={`Plan de cuidado · ${elder?.full_name}`}
+        description="Configure medicamentos, citas médicas y reglas alimenticias. Los cambios se reflejan en el portal del adulto mayor y en las alertas."
+        breadcrumbs={[
+          { label: "Mis personas", href: "/cuidador" },
+          { label: elder?.full_name ?? "Plan", href: `/cuidador/${elderId}/dashboard` },
+          { label: "Plan de cuidado" },
+        ]}
+      />
+
+      <ConfigTabs
+        elderId={elderId}
+        medications={medications ?? []}
+        appointments={appointments ?? []}
+        foodRules={foodRules ?? []}
+      />
+    </div>
+  );
+}

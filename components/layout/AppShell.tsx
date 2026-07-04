@@ -1,0 +1,316 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Users,
+  LogOut,
+  Heart,
+  Menu,
+  X,
+  ChevronRight,
+  LayoutGrid,
+} from "lucide-react";
+import { useState } from "react";
+import { signOut } from "@/app/actions/auth";
+import { cn } from "@/lib/utils";
+import type { Elder } from "@/lib/auth/session";
+
+interface NavLink {
+  href: string;
+  label: string;
+  description: string;
+  icon: typeof LayoutDashboard;
+  match?: (pathname: string) => boolean;
+}
+
+interface AppShellProps {
+  children: React.ReactNode;
+  role: "caregiver" | "elder";
+  userName: string;
+  elders?: Elder[];
+  currentElderId?: string;
+}
+
+function isActive(pathname: string, href: string, customMatch?: (p: string) => boolean) {
+  if (customMatch) return customMatch(pathname);
+  if (href === "/cuidador") return pathname === "/cuidador";
+  return pathname.startsWith(href);
+}
+
+export function AppShell({
+  children,
+  role,
+  userName,
+  elders = [],
+  currentElderId,
+}: AppShellProps) {
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const pathElderMatch = pathname.match(/\/cuidador\/([0-9a-f-]{36})/i);
+  const activeElderId = currentElderId ?? pathElderMatch?.[1];
+  const activeElder = elders.find((e) => e.id === activeElderId);
+
+  const caregiverMainLinks: NavLink[] = [
+    {
+      href: "/cuidador/resumen",
+      label: "Panel general",
+      description: "Resumen de todas las personas",
+      icon: LayoutGrid,
+      match: (p) => p === "/cuidador/resumen",
+    },
+    {
+      href: "/cuidador",
+      label: "Mis personas",
+      description: "Ver, agregar y seleccionar",
+      icon: Users,
+      match: (p) => p === "/cuidador",
+    },
+  ];
+
+  const caregiverElderLinks: NavLink[] = activeElderId
+    ? [
+        {
+          href: `/cuidador/${activeElderId}/dashboard`,
+          label: "Resumen",
+          description: "Alertas y actividad en vivo",
+          icon: LayoutDashboard,
+        },
+        {
+          href: `/cuidador/${activeElderId}/configuracion`,
+          label: "Plan de cuidado",
+          description: "Medicamentos, citas y dieta",
+          icon: ClipboardList,
+        },
+      ]
+    : [];
+
+  const elderLinks: NavLink[] = [
+    {
+      href: "/adulto",
+      label: "Mi día",
+      description: "Rutina, bienestar y contacto",
+      icon: Heart,
+      match: (p) => p.startsWith("/adulto"),
+    },
+  ];
+
+  const mainLinks = role === "caregiver" ? caregiverMainLinks : elderLinks;
+  const contextualLinks = role === "caregiver" ? caregiverElderLinks : [];
+
+  function NavLinkItem({ link }: { link: NavLink }) {
+    const Icon = link.icon;
+    const active = isActive(pathname, link.href, link.match);
+
+    return (
+      <Link
+        href={link.href}
+        onClick={() => setMobileOpen(false)}
+        className={cn(
+          "group flex items-center gap-3 rounded-xl px-3 py-3 transition-all",
+          active
+            ? "bg-care-accent-dark text-white shadow-sm"
+            : "text-care-muted hover:bg-care-secondary/30 hover:text-care-foreground"
+        )}
+      >
+        <Icon className="h-5 w-5 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold leading-tight">{link.label}</p>
+          <p
+            className={cn(
+              "truncate text-xs leading-tight",
+              active ? "text-white/80" : "text-care-muted-light group-hover:text-care-muted"
+            )}
+          >
+            {link.description}
+          </p>
+        </div>
+        {active && <ChevronRight className="h-4 w-4 shrink-0 opacity-70" />}
+      </Link>
+    );
+  }
+
+  const NavContent = () => (
+    <>
+      <div className="mb-6 flex items-center gap-3 px-2">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-care-accent-dark text-white shadow-sm">
+          <Heart className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="font-bold text-care-foreground">CareLink</p>
+          <p className="truncate text-sm text-care-muted">{userName}</p>
+        </div>
+      </div>
+
+      {role === "caregiver" && activeElder && (
+        <div className="mb-5 rounded-xl bg-care-secondary/30 px-3 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-care-muted-light">
+            Viendo ahora
+          </p>
+          <p className="mt-1 truncate font-bold text-care-foreground">{activeElder.full_name}</p>
+        </div>
+      )}
+
+      {role === "caregiver" && elders.length > 0 && (
+        <div className="mb-6 px-1">
+          <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-care-muted-light">
+            Cambiar persona
+          </p>
+          <div className="space-y-1">
+            {elders.map((e) => (
+              <Link
+                key={e.id}
+                href={`/cuidador/${e.id}/dashboard`}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+                  activeElderId === e.id
+                    ? "bg-white font-semibold text-care-accent-dark shadow-sm"
+                    : "text-care-muted hover:bg-care-secondary/30"
+                )}
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-care-accent/30 text-xs font-bold text-care-accent-darker">
+                  {e.full_name.charAt(0)}
+                </span>
+                <span className="truncate">{e.full_name}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-care-muted-light">
+        Menú
+      </div>
+      <nav className="flex flex-col gap-1">
+        {mainLinks.map((link) => (
+          <NavLinkItem key={link.href} link={link} />
+        ))}
+      </nav>
+
+      {contextualLinks.length > 0 && (
+        <>
+          <div className="mb-2 mt-5 px-2 text-xs font-semibold uppercase tracking-wide text-care-muted-light">
+            Seguimiento
+          </div>
+          <nav className="flex flex-col gap-1">
+            {contextualLinks.map((link) => (
+              <NavLinkItem key={link.href} link={link} />
+            ))}
+          </nav>
+        </>
+      )}
+
+      <form action={signOut} className="mt-auto px-1 pt-6">
+        <button
+          type="submit"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-care-muted transition-colors hover:bg-red-50 hover:text-red-700"
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="font-medium">Cerrar sesión</span>
+        </button>
+      </form>
+    </>
+  );
+
+  const showMobileBottomNav = role === "caregiver";
+
+  const mobileBottomLinks: NavLink[] = showMobileBottomNav
+    ? [
+        {
+          href: "/cuidador/resumen",
+          label: "Panel",
+          description: "Resumen general",
+          icon: LayoutGrid,
+          match: (p) => p === "/cuidador/resumen",
+        },
+        ...(activeElderId ? contextualLinks : []),
+        {
+          href: "/cuidador",
+          label: "Personas",
+          description: "Lista de personas",
+          icon: Users,
+          match: (p) => p === "/cuidador",
+        },
+      ]
+    : [];
+
+  return (
+    <div className="min-h-dvh bg-care-primary">
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-care-secondary/50 bg-white/90 px-4 py-3 backdrop-blur-sm lg:hidden">
+        <div className="flex min-w-0 items-center gap-2">
+          <Heart className="h-6 w-6 shrink-0 text-care-accent-dark" />
+          <div className="min-w-0">
+            <span className="block truncate font-bold text-care-foreground">CareLink</span>
+            {role === "caregiver" && activeElder && (
+              <span className="block truncate text-xs text-care-muted">{activeElder.full_name}</span>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="rounded-lg p-2 text-care-muted hover:bg-care-secondary/30"
+          aria-label="Abrir menú"
+        >
+          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
+      </header>
+
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-care-foreground/20 backdrop-blur-sm lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        >
+          <aside
+            className="flex h-full w-[min(100%,20rem)] flex-col bg-white p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <NavContent />
+          </aside>
+        </div>
+      )}
+
+      <div className="mx-auto flex max-w-7xl">
+        <aside className="hidden w-72 shrink-0 flex-col border-r border-care-secondary/50 bg-white/80 p-4 backdrop-blur-sm lg:flex lg:min-h-[calc(100dvh)]">
+          <NavContent />
+        </aside>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <main className={cn("flex-1", showMobileBottomNav && "pb-20 lg:pb-0")}>{children}</main>
+
+          {showMobileBottomNav && (
+          <nav
+            aria-label="Acceso rápido"
+            className="fixed inset-x-0 bottom-0 z-40 border-t border-care-secondary/50 bg-white/95 px-2 py-2 backdrop-blur-sm lg:hidden"
+          >
+            <div className="mx-auto flex max-w-lg justify-around gap-1">
+              {mobileBottomLinks.map((link) => {
+                const Icon = link.icon;
+                const active = isActive(pathname, link.href, link.match);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={cn(
+                      "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-xs font-semibold transition-colors",
+                      active
+                        ? "bg-care-accent/30 text-care-accent-darker"
+                        : "text-care-muted"
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="truncate">{link.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

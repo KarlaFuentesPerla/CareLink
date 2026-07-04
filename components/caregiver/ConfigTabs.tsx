@@ -1,0 +1,319 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import {
+  createMedication,
+  deleteMedication,
+  createAppointment,
+  deleteAppointment,
+  createFoodRule,
+  deleteFoodRule,
+} from "@/app/actions/caregiver";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CalendarClock, Pill, Salad, Trash2 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { IconBox } from "@/components/ui/icon-box";
+import type { Medication, Appointment, FoodRule } from "@/types/database";
+
+interface ConfigTabsProps {
+  elderId: string;
+  medications: Medication[];
+  appointments: Appointment[];
+  foodRules: FoodRule[];
+}
+
+const TABS = [
+  {
+    id: "medicamentos",
+    label: "Medicamentos",
+    description: "Horarios y dosis",
+    icon: Pill,
+  },
+  {
+    id: "citas",
+    label: "Citas y exámenes",
+    description: "Agenda médica",
+    icon: CalendarClock,
+  },
+  {
+    id: "alimentacion",
+    label: "Alimentación",
+    description: "Restricciones y recomendaciones",
+    icon: Salad,
+  },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
+
+export function ConfigTabs({
+  elderId,
+  medications,
+  appointments,
+  foodRules,
+}: ConfigTabsProps) {
+  const [tab, setTab] = useState<TabId>("medicamentos");
+  const [pending, startTransition] = useTransition();
+  const [message, setMessage] = useState("");
+
+  return (
+    <div>
+      <div className="mb-6 grid gap-2 sm:grid-cols-3">
+        {TABS.map(({ id, label, description, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={cn(
+              "flex items-start gap-3 rounded-2xl border-2 p-4 text-left transition-all",
+              tab === id
+                ? "border-care-accent-dark bg-care-accent-dark text-white shadow-sm"
+                : "border-care-secondary/50 bg-white text-care-muted hover:border-care-secondary hover:bg-care-primary"
+            )}
+          >
+            <IconBox
+              icon={Icon}
+              tone={tab === id ? "muted" : "accent"}
+              size="sm"
+              className={tab === id ? "bg-white/20 text-white" : undefined}
+            />
+            <div>
+              <p className="font-semibold">{label}</p>
+              <p className={cn("text-xs", tab === id ? "text-white/80" : "text-care-muted-light")}>
+                {description}
+              </p>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {message && (
+        <p className="mb-4 rounded-lg bg-green-50 p-3 text-green-800">{message}</p>
+      )}
+
+      {tab === "medicamentos" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Agregar medicamento</CardTitle>
+              <p className="text-sm text-care-muted">
+                Registre nombre, dosis y hora para los recordatorios.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const fd = new FormData(e.currentTarget);
+                  startTransition(async () => {
+                    await createMedication(elderId, {
+                      name: fd.get("name") as string,
+                      dose: fd.get("dose") as string,
+                      time: fd.get("time") as string,
+                      notes: fd.get("notes") as string,
+                    });
+                    setMessage("Medicamento agregado");
+                    e.currentTarget.reset();
+                  });
+                }}
+                className="space-y-3"
+              >
+                <input name="name" required placeholder="Nombre del medicamento" className="care-input" />
+                <input name="dose" placeholder="Dosis (ej: 1 tableta)" className="care-input" />
+                <input name="time" type="time" required className="care-input" />
+                <input name="notes" placeholder="Notas adicionales" className="care-input" />
+                <Button type="submit" disabled={pending} className="w-full">
+                  Guardar medicamento
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+          <ItemList
+            icon={Pill}
+            items={medications.map((m) => ({
+              id: m.id,
+              title: m.name,
+              subtitle: `${m.dose ?? ""} · ${m.time ?? ""}`,
+            }))}
+            onDelete={(id) =>
+              startTransition(async () => {
+                await deleteMedication(id, elderId);
+                setMessage("Medicamento eliminado");
+              })
+            }
+            pending={pending}
+            emptyText="No hay medicamentos registrados todavía."
+          />
+        </div>
+      )}
+
+      {tab === "citas" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Agendar cita o examen</CardTitle>
+              <p className="text-sm text-care-muted">
+                Programe consultas médicas y estudios de laboratorio.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const fd = new FormData(e.currentTarget);
+                  startTransition(async () => {
+                    await createAppointment(elderId, {
+                      title: fd.get("title") as string,
+                      type: fd.get("type") as "cita" | "examen",
+                      startsAt: fd.get("startsAt") as string,
+                      notes: fd.get("notes") as string,
+                    });
+                    setMessage("Evento agregado al calendario");
+                    e.currentTarget.reset();
+                  });
+                }}
+                className="space-y-3"
+              >
+                <input name="title" required placeholder="Título del evento" className="care-input" />
+                <select name="type" className="care-input">
+                  <option value="cita">Cita médica</option>
+                  <option value="examen">Examen</option>
+                </select>
+                <input name="startsAt" type="datetime-local" required className="care-input" />
+                <input name="notes" placeholder="Notas" className="care-input" />
+                <Button type="submit" disabled={pending} className="w-full">
+                  Guardar evento
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+          <ItemList
+            icon={CalendarClock}
+            items={appointments.map((a) => ({
+              id: a.id,
+              title: a.title,
+              subtitle: `${a.type} · ${new Date(a.starts_at).toLocaleString("es-MX")}`,
+            }))}
+            onDelete={(id) =>
+              startTransition(async () => {
+                await deleteAppointment(id, elderId);
+                setMessage("Evento eliminado");
+              })
+            }
+            pending={pending}
+            emptyText="No hay citas ni exámenes registrados."
+          />
+        </div>
+      )}
+
+      {tab === "alimentacion" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Regla alimenticia</CardTitle>
+              <p className="text-sm text-care-muted">
+                Indique alimentos prohibidos, a reducir o recomendaciones.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const fd = new FormData(e.currentTarget);
+                  startTransition(async () => {
+                    await createFoodRule(elderId, {
+                      label: fd.get("label") as string,
+                      type: fd.get("type") as FoodRule["type"],
+                    });
+                    setMessage("Regla alimenticia agregada");
+                    e.currentTarget.reset();
+                  });
+                }}
+                className="space-y-3"
+              >
+                <select name="type" className="care-input">
+                  <option value="prohibited">Prohibido</option>
+                  <option value="reduce">Reducir</option>
+                  <option value="recommendation">Recomendación</option>
+                  <option value="allergen">Alérgeno</option>
+                </select>
+                <input name="label" required placeholder="Ej: sal, tortillas, lácteos" className="care-input" />
+                <Button type="submit" disabled={pending} className="w-full">
+                  Guardar regla
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+          <ItemList
+            icon={Salad}
+            items={foodRules.map((f) => ({
+              id: f.id,
+              title: f.label,
+              subtitle: f.type,
+            }))}
+            onDelete={(id) =>
+              startTransition(async () => {
+                await deleteFoodRule(id, elderId);
+                setMessage("Regla eliminada");
+              })
+            }
+            pending={pending}
+            emptyText="No hay reglas alimenticias registradas."
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ItemList({
+  icon,
+  items,
+  onDelete,
+  pending,
+  emptyText,
+}: {
+  icon: LucideIcon;
+  items: { id: string; title: string; subtitle: string }[];
+  onDelete: (id: string) => void;
+  pending: boolean;
+  emptyText: string;
+}) {
+  if (items.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 py-10 text-center text-care-muted">
+          <IconBox icon={icon} tone="muted" size="lg" />
+          <p>{emptyText}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {items.map((item) => (
+        <Card key={item.id}>
+          <CardContent className="flex items-center justify-between gap-3 p-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <IconBox icon={icon} tone="accent" size="sm" />
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-care-foreground">{item.title}</p>
+                <p className="truncate text-sm text-care-muted">{item.subtitle}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => onDelete(item.id)}
+              disabled={pending}
+              className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+              aria-label={`Eliminar ${item.title}`}
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
