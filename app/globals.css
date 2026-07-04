@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Segoe UI", system-ui, sans-serif;
+
+  /* Paleta CareLink */
+  --color-care-primary: #fbefef;
+  --color-care-secondary: #f5cbcb;
+  --color-care-accent: #c5b3d3;
+
+  /* Tonos derivados para contraste y jerarquía */
+  --color-care-accent-dark: #9b87b5;
+  --color-care-accent-darker: #7a6694;
+  --color-care-foreground: #3d2f42;
+  --color-care-muted: #6b5a73;
+  --color-care-muted-light: #9a8899;
+}
+
+html {
+  font-size: 18px;
+}
+
+body {
+  @apply bg-care-primary text-care-foreground antialiased;
+  min-height: 100dvh;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, color-mix(in srgb, var(--color-care-accent) 25%, transparent), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 100%, color-mix(in srgb, var(--color-care-secondary) 40%, transparent), transparent);
+}
+
+@layer utilities {
+  .care-surface {
+    @apply rounded-2xl border-2 border-care-secondary/60 bg-white shadow-sm;
+  }
+
+  .care-input {
+    @apply w-full rounded-xl border-2 border-care-secondary bg-white p-3 text-lg text-care-foreground transition-colors placeholder:text-care-muted-light focus:border-care-accent focus:outline-none focus:ring-4 focus:ring-care-accent/20;
+  }
+
+  .care-gradient-page {
+    @apply bg-gradient-to-br from-care-primary via-care-primary to-care-secondary/30;
+  }
+
+  .care-gradient-soft {
+    @apply bg-gradient-to-b from-care-primary to-care-secondary/20;
+  }
+
+  .care-section-anchor {
+    scroll-margin-top: 9rem;
+  }
+}
