@@ -1,4 +1,5 @@
 import { requireElder, getProfile } from "@/lib/auth/session";
+import { ElderVoiceChatShell } from "@/components/elder/ElderVoiceChatShell";
 import { AppShell } from "@/components/layout/AppShell";
 
 export default async function AdultoLayout({
@@ -15,7 +16,7 @@ export default async function AdultoLayout({
       userName={profile?.full_name ?? elder.full_name}
       avatarUrl={profile?.avatar_url ?? null}
     >
-      {children}
+      <ElderVoiceChatShell elderName={elder.full_name}>{children}</ElderVoiceChatShell>
     </AppShell>
   );
 }

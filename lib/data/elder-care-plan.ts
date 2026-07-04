@@ -301,6 +301,13 @@ function buildRoutineViews(
 export async function getElderCarePlan(): Promise<ElderCarePlan> {
   const { elder } = await requireElder();
   const supabase = await createClient();
+  return fetchElderCarePlan(elder.id, supabase);
+}
+
+export async function fetchElderCarePlan(
+  elderId: string,
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<ElderCarePlan> {
   const now = new Date();
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
@@ -310,23 +317,23 @@ export async function getElderCarePlan(): Promise<ElderCarePlan> {
       supabase
         .from("medications")
         .select("*")
-        .eq("elder_id", elder.id)
+        .eq("elder_id", elderId)
         .order("created_at"),
       supabase
         .from("appointments")
         .select("*")
-        .eq("elder_id", elder.id)
+        .eq("elder_id", elderId)
         .gte("starts_at", startOfToday.toISOString())
         .order("starts_at"),
       supabase
         .from("food_rules")
         .select("*")
-        .eq("elder_id", elder.id)
+        .eq("elder_id", elderId)
         .order("created_at"),
       supabase
         .from("reminders")
         .select("id, title, type, due_at, status, message_text")
-        .eq("elder_id", elder.id)
+        .eq("elder_id", elderId)
         .in("type", ["meal", "activity", "hydration"])
         .order("due_at"),
     ]);

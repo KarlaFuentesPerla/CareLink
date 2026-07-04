@@ -24,6 +24,7 @@ import { MealCards } from "@/components/elder/MealCards";
 import { MoodSelector } from "@/components/elder/MoodSelector";
 import { NextAppointmentCard } from "@/components/elder/NextAppointmentCard";
 import { NextMedicationCard } from "@/components/elder/NextMedicationCard";
+import { VoiceChatCompanion } from "@/components/elder/VoiceChatCompanion";
 import { ReminderPlayer } from "@/components/elder/ReminderPlayer";
 import { RoutineActivitiesList } from "@/components/elder/RoutineActivitiesList";
 import { PageHeader } from "@/components/layout/page-header";
@@ -165,6 +166,18 @@ export function AdultoPortal({ elderName, carePlan }: AdultoPortalProps) {
               description="Alimentos que debe evitar, reducir o preferir según su plan para la presión alta."
             />
             <ElderFoodRulesList foodRules={carePlan.foodRules} />
+          </div>
+        );
+
+      case "acompanante":
+        return (
+          <div className="space-y-6">
+            <SectionHeader
+              icon={MessageCircleHeart}
+              title="Su acompañante de voz"
+              description="Hable con CareLink. Escuchará su voz, le responderá por escrito y con audio."
+            />
+            <VoiceChatCompanion elderName={elderName} />
           </div>
         );
 

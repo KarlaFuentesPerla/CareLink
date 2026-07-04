@@ -49,6 +49,8 @@ export const FALLBACK_TTS_TEXTS: Record<string, string> = {
   medication:
     "Buenos días, Don Manuel. Es momento de tomar su medicamento para la presión. Cuando termine, puede presionar el botón verde de Ya tomé mi medicamento.",
   meal: "Hola, Don Manuel. Su almuerzo se aproxima. Recordemos no incluir tortilla y evitar el exceso de sal. Una fruta como la sandía puede ser una buena opción.",
+  companion:
+    "Hola, Don Manuel. Estoy aquí para acompañarlo. Cuénteme, ¿cómo se siente hoy?",
   appointment:
     "Don Manuel, hoy tiene cita con el cardiólogo a las tres de la tarde. No olvide llevar sus documentos y exámenes.",
   exam: "Buenos días, Don Manuel. Hoy tiene examen de sangre. Recuerde seguir las indicaciones registradas por su familia.",
