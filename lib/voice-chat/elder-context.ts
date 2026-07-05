@@ -1,5 +1,6 @@
 import { fetchElderCarePlan, type ElderCarePlan } from "@/lib/data/elder-care-plan";
 import { createClient } from "@/lib/supabase/server";
+import { prepareTextForSpeech } from "@/lib/time/speech";
 import type { Elder } from "@/types/database";
 
 function capitalize(text: string) {
@@ -111,7 +112,7 @@ export function formatElderChatContext(elder: Elder, plan: ElderCarePlan): strin
     sections.push(`Estado de ánimo registrado hoy: ${elder.mood_today}.`);
   }
 
-  return sections.join("\n");
+  return prepareTextForSpeech(sections.join("\n"));
 }
 
 export async function loadElderChatContext(elder: Elder): Promise<string> {

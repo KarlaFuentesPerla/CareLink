@@ -2,6 +2,7 @@ import {
   ELEVENLABS_MODEL_ID,
   ELEVENLABS_VOICE_ID,
 } from "@/lib/elevenlabs/constants";
+import { prepareTextForSpeech } from "@/lib/time/speech";
 
 export function getElevenLabsVoiceId() {
   return process.env.ELEVENLABS_VOICE_ID?.trim() || ELEVENLABS_VOICE_ID;
@@ -29,6 +30,8 @@ export async function generateSpeech(
     return { error: "ELEVENLABS_API_KEY no configurada" };
   }
 
+  const speechText = prepareTextForSpeech(text);
+
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
     {
@@ -39,7 +42,7 @@ export async function generateSpeech(
         Accept: "audio/mpeg",
       },
       body: JSON.stringify({
-        text,
+        text: speechText,
         model_id: ELEVENLABS_MODEL_ID,
         voice_settings: {
           stability: 0.45,
