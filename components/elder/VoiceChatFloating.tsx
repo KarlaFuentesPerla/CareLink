@@ -6,8 +6,9 @@ import { useVoiceChat } from "@/components/elder/voice-chat-context";
 import { cn } from "@/lib/utils";
 
 export function VoiceChatFloating() {
-  const { isOpen, setOpen, toggleOpen, status } = useVoiceChat();
+  const { isOpen, setOpen, toggleOpen, status, embeddedPanelVisible } = useVoiceChat();
   const isActive = status !== "idle";
+  const fabPlayback = !isOpen && !embeddedPanelVisible;
 
   return (
     <>
@@ -38,7 +39,7 @@ export function VoiceChatFloating() {
             isActive && !isOpen && "animate-pulse ring-4 ring-red-300"
           )}
         >
-          <VoiceChatAvatar status={status} variant="fab" />
+          <VoiceChatAvatar status={status} variant="fab" playback={fabPlayback} />
           <span className="sr-only">
             {isOpen ? "Cerrar tortuguita acompañante" : "Abrir tortuguita acompañante"}
           </span>

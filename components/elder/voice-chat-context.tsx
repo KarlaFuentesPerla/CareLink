@@ -26,8 +26,10 @@ interface VoiceChatContextValue {
   status: ChatStatus;
   error: string;
   isOpen: boolean;
+  embeddedPanelVisible: boolean;
   recordingSupported: boolean;
   setOpen: (open: boolean) => void;
+  setEmbeddedPanelVisible: (visible: boolean) => void;
   toggleOpen: () => void;
   toggleRecording: () => void;
   statusLabel: string;
@@ -66,6 +68,7 @@ export function VoiceChatProvider({
   const [status, setStatus] = useState<ChatStatus>("idle");
   const [error, setError] = useState("");
   const [isOpen, setOpen] = useState(false);
+  const [embeddedPanelVisible, setEmbeddedPanelVisible] = useState(false);
   const [recordingSupported, setRecordingSupported] = useState(true);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -201,8 +204,10 @@ export function VoiceChatProvider({
         status,
         error,
         isOpen,
+        embeddedPanelVisible,
         recordingSupported,
         setOpen,
+        setEmbeddedPanelVisible,
         toggleOpen,
         toggleRecording,
         statusLabel: STATUS_LABELS[status],

@@ -20,11 +20,18 @@ export function VoiceChatPanel({ variant = "embedded", onClose }: VoiceChatPanel
     recordingSupported,
     toggleRecording,
     statusLabel,
+    setEmbeddedPanelVisible,
   } = useVoiceChat();
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const busy = status === "processing" || status === "speaking";
   const avatarSize = variant === "embedded" ? "size-36" : "size-28";
+
+  useEffect(() => {
+    if (variant !== "embedded") return;
+    setEmbeddedPanelVisible(true);
+    return () => setEmbeddedPanelVisible(false);
+  }, [variant, setEmbeddedPanelVisible]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -93,10 +100,11 @@ export function VoiceChatPanel({ variant = "embedded", onClose }: VoiceChatPanel
           <div ref={chatEndRef} />
         </div>
 
-        <div className="shrink-0">
+        <div className="sticky top-0 shrink-0 self-start">
           <VoiceChatAvatar
             status={status}
             variant="corner"
+            playback
             className={cn(
               "rounded-2xl border-2 border-care-secondary/60 shadow-md",
               avatarSize

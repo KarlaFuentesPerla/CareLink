@@ -1,11 +1,11 @@
 import { fetchElderCarePlan, type ElderCarePlan } from "@/lib/data/elder-care-plan";
 import { createClient } from "@/lib/supabase/server";
-import { prepareTextForSpeech } from "@/lib/time/speech";
+import {
+  formatCurrentDateTimeForContext,
+  formatRelativeUntil,
+  isUpcoming,
+} from "@/lib/time/relative";
 import type { Elder } from "@/types/database";
-
-function capitalize(text: string) {
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
 
 function formatFoodRules(plan: ElderCarePlan): string[] {
   const groups: Record<string, string[]> = {
@@ -35,13 +35,54 @@ function formatFoodRules(plan: ElderCarePlan): string[] {
   return lines;
 }
 
-export function formatElderChatContext(elder: Elder, plan: ElderCarePlan): string {
+export function formatElderChatContext(
+  elder: Elder,
+  plan: ElderCarePlan,
+  now: Date = new Date()
+): string {
   const sections: string[] = [];
-  const today = capitalize(
-    new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })
-  );
 
-  sections.push(`Hoy es ${today}.`);
+  sections.push(`Hora actual: ${formatCurrentDateTimeForContext(now)}.`);
+
+  if (plan.meals.length) {
+    const meals = plan.meals
+      .map((m) => {
+        const due = new Date(m.dueAt);
+        let suffix = "";
+        if (m.status === "completed") suffix = " (ya registrada)";
+        else if (isUpcoming(due, now)) suffix = ` (${formatRelativeUntil(due, now)})`;
+        else if (m.status !== "completed") suffix = " (ya pasó)";
+        return `${m.label} a las ${m.timeLabel}${suffix}`;
+      })
+      .join("; ");
+    sections.push(`Comidas de hoy: ${meals}.`);
+
+    const nextMeal = plan.meals.find(
+      (m) => m.status === "pending" && isUpcoming(new Date(m.dueAt), now)
+    );
+    if (nextMeal) {
+      const due = new Date(nextMeal.dueAt);
+      sections.push(
+        `Próxima comida: ${nextMeal.label} a las ${nextMeal.timeLabel} (${formatRelativeUntil(due, now)}).`
+      );
+    }
+  }
+
+  if (plan.routineActivities.length) {
+    const activities = plan.routineActivities
+      .map((a) => {
+        const due = new Date(a.dueAt);
+        const suffix =
+          a.status === "completed"
+            ? " (completada)"
+            : isUpcoming(due, now)
+              ? ` (${formatRelativeUntil(due, now)})`
+              : " (ya pasó)";
+        return `${a.title} a las ${a.timeLabel}${suffix}`;
+      })
+      .join("; ");
+    sections.push(`Actividades de rutina: ${activities}.`);
+  }
 
   const family: string[] = [];
   if (elder.main_caregiver_name) {
@@ -56,10 +97,12 @@ export function formatElderChatContext(elder: Elder, plan: ElderCarePlan): strin
 
   if (plan.featuredMedicationDoses.length) {
     const doses = plan.featuredMedicationDoses
-      .map(
-        (d) =>
-          `${d.title}${d.subtitle ? ` (${d.subtitle})` : ""} a las ${d.time}${d.dateLabel ? ` (${d.dateLabel})` : ""}`
-      )
+      .map((d) => {
+        const due = new Date(d.sortKey);
+        const relative =
+          !d.isPast && isUpcoming(due, now) ? ` (${formatRelativeUntil(due, now)})` : "";
+        return `${d.title}${d.subtitle ? ` (${d.subtitle})` : ""} a las ${d.time}${d.dateLabel ? ` (${d.dateLabel})` : ""}${relative}`;
+      })
       .join("; ");
     sections.push(`Próximo(s) medicamento(s): ${doses}.`);
   }
@@ -77,28 +120,15 @@ export function formatElderChatContext(elder: Elder, plan: ElderCarePlan): strin
     sections.push(`Medicamentos del plan: ${allMeds}.`);
   }
 
-  if (plan.meals.length) {
-    const meals = plan.meals
-      .map(
-        (m) =>
-          `${m.label} a las ${m.timeLabel}${m.status === "completed" ? " (ya registrada)" : ""}`
-      )
-      .join("; ");
-    sections.push(`Comidas de hoy: ${meals}.`);
-  }
-
-  if (plan.routineActivities.length) {
-    const activities = plan.routineActivities
-      .map((a) => `${a.title} a las ${a.timeLabel}`)
-      .join("; ");
-    sections.push(`Actividades de rutina: ${activities}.`);
-  }
-
   const upcomingAppts = plan.appointments.filter((a) => !a.isPast);
   if (upcomingAppts.length) {
     const appts = upcomingAppts
       .slice(0, 4)
-      .map((a) => `${a.title} (${a.typeLabel}) — ${a.dateLabel} ${a.timeLabel}`)
+      .map((a) => {
+        const due = new Date(a.startsAt);
+        const relative = isUpcoming(due, now) ? ` (${formatRelativeUntil(due, now)})` : "";
+        return `${a.title} (${a.typeLabel}) — ${a.dateLabel} ${a.timeLabel}${relative}`;
+      })
       .join("; ");
     sections.push(`Citas y exámenes próximos: ${appts}.`);
   }
@@ -112,11 +142,12 @@ export function formatElderChatContext(elder: Elder, plan: ElderCarePlan): strin
     sections.push(`Estado de ánimo registrado hoy: ${elder.mood_today}.`);
   }
 
-  return prepareTextForSpeech(sections.join("\n"));
+  return sections.join("\n");
 }
 
 export async function loadElderChatContext(elder: Elder): Promise<string> {
   const supabase = await createClient();
+  const now = new Date();
   const plan = await fetchElderCarePlan(elder.id, supabase);
-  return formatElderChatContext(elder, plan);
+  return formatElderChatContext(elder, plan, now);
 }
